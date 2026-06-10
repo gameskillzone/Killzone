@@ -2750,6 +2750,8 @@ function doKill(victim,killer){
       sv.coins+=coins;coinsGame+=coins;writeSave();showCoinPop('+🪙'+coins);
       const epKill=killer.weapon==='rifle'?30:killer.weapon==='rocket'?28:killer.weapon==='minigun'?18:killer.weapon==='shotgun'?22:20;
       addEP(epKill,'Kill');
+      if(!myPlayer._epEarned)myPlayer._epEarned=0;
+      myPlayer._epEarned+=epKill;
       questProgress('kill', killer.weapon);
       // killstreak tracking
       if(!myPlayer._ks)myPlayer._ks=0;
@@ -2833,12 +2835,13 @@ function doEndGame(winnerId){
       <span class="rank-badge" style="color:${rank.col};border-color:${rank.col}44;font-size:0.8rem;">${rank.em} ${rank.name}</span>
     </div>
     <div style="font-size:0.65rem;color:#888;margin-bottom:0.18rem;">EP verdient</div>
-    <div style="color:#44ffaa;font-family:'Orbitron',monospace;font-size:1rem;">+${epGame+(isWinner?epWin:0)} EP</div>
-    <div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">${epGame} Spiel${isWinner?' · '+epWin+' Sieg':''}</div>
+    <div style="color:#44ffaa;font-family:'Orbitron',monospace;font-size:1rem;">+${epGame+(isWinner?epWin:0)+(myP?myP._epEarned||0:0)} EP</div>
+    <div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">${epGame} Spiel${isWinner?' · '+epWin+' Sieg':''}${(myP&&myP._epEarned)?(' · '+(myP._epEarned)+' Kills'):''}</div>
     <div style="margin-top:0.7rem;font-size:0.6rem;color:#666;">${sv.ep||0} EP gesamt${next?' · noch '+(next.ep-(sv.ep||0))+' bis '+next.em+next.name:' · MAX'}</div>
     <div class="rank-bar-wrap" style="margin-top:0.3rem;"><div class="rank-bar" style="width:${pct}%;background:${rank.col};"></div></div>
     <div style="margin-top:0.8rem;font-size:0.65rem;color:#888;">Münzen verdient</div>
-    <div style="color:#ffd700;font-family:'Orbitron',monospace;">🪙 ${coinsGame}</div>
+    <div style="color:#ffd700;font-family:'Orbitron',monospace;font-size:1rem;">🪙 ${coinsGame}</div>
+    <div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">${myP&&myP._coinsEarned?myP._coinsEarned+' Kills':'0 Kills'}${isWinner?' · 50 Sieg':''}</div>
   </div>
   </div>
   <div style="display:flex;gap:0.6rem;margin-top:0.4rem;flex-wrap:wrap;justify-content:center;">
