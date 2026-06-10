@@ -856,13 +856,42 @@ function renderLeaderboard(){
     }
 
     document.getElementById('tab-content').innerHTML=`
-      <div style="max-width:600px;width:100%;margin:0 auto;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem;flex-wrap:wrap;gap:0.4rem;">
-          <div style="font-family:'Orbitron',monospace;font-size:0.7rem;color:#888;letter-spacing:0.15em;">🏆 TOP SPIELER</div>
-          <div style="font-size:0.6rem;color:#444;">${entries.length} Spieler · nach EP sortiert</div>
+      <div style="max-width:1000px;width:100%;margin:0 auto;display:flex;gap:1.2rem;align-items:flex-start;flex-wrap:wrap;">
+        <div style="flex:1;min-width:280px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem;flex-wrap:wrap;gap:0.4rem;">
+            <div style="font-family:'Orbitron',monospace;font-size:0.7rem;color:#888;letter-spacing:0.15em;">🏆 TOP SPIELER</div>
+            <div style="font-size:0.6rem;color:#444;">${entries.length} Spieler · nach EP sortiert</div>
+          </div>
+          ${rows}
+          ${myNote}
         </div>
-        ${rows}
-        ${myNote}
+        <div style="flex:0 0 320px;min-width:260px;">
+          <div style="font-family:'Orbitron',monospace;font-size:0.7rem;color:#888;letter-spacing:0.15em;margin-bottom:0.7rem;">📊 RANG-ÜBERSICHT</div>
+          <table style="width:100%;border-collapse:collapse;font-size:0.72rem;">
+            <thead>
+              <tr style="border-bottom:1px solid #222;">
+                <th style="text-align:left;padding:0.35rem 0.5rem;color:#555;font-weight:normal;font-family:'Orbitron',monospace;font-size:0.6rem;">RANG</th>
+                <th style="text-align:right;padding:0.35rem 0.5rem;color:#555;font-weight:normal;font-family:'Orbitron',monospace;font-size:0.6rem;">EP</th>
+                <th style="text-align:right;padding:0.35rem 0.5rem;color:#555;font-weight:normal;font-family:'Orbitron',monospace;font-size:0.6rem;">ST</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${RANKS.map(r=>{
+                const st=SEASON_ST_REWARDS[r.name]||0;
+                const isCur=getRank(sv&&sv.ep||0).name===r.name;
+                return `<tr style="border-bottom:1px solid #111;background:${isCur?r.col+'18':'transparent'}">
+                  <td style="padding:0.4rem 0.5rem;">
+                    <span style="color:${r.col};font-family:'Orbitron',monospace;font-size:0.72rem;">${r.em} ${r.name}</span>
+                    ${isCur?'<span style="font-size:0.55rem;color:'+r.col+';margin-left:0.4rem;">◀ DU</span>':''}
+                  </td>
+                  <td style="text-align:right;padding:0.4rem 0.5rem;color:#44ffaa;font-family:'Orbitron',monospace;">${r.ep===0?'0':r.ep.toLocaleString('de-CH')}</td>
+                  <td style="text-align:right;padding:0.4rem 0.5rem;color:${st>0?'#ffd700':'#444'};font-family:'Orbitron',monospace;">${st>0?'+'+st+' ⚡':'—'}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+          <div style="font-size:0.58rem;color:#444;margin-top:0.5rem;">ST-Belohnungen am Saisonende · EP –60% Reset</div>
+        </div>
       </div>`;
   }).catch(()=>{
     document.getElementById('tab-content').innerHTML=`<div style="text-align:center;padding:3rem;color:#555;font-size:0.8rem;">Fehler beim Laden der Bestenliste.</div>`;
