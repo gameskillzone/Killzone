@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GameHub</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;500;700&display=swap');
+
+  :root{
+    --bg: #0b0e13;
+    --bg-alt: #10141c;
+    --line: #232a36;
+    --ink: #e8ecf1;
+    --ink-dim: #7d8899;
+    --killzone: #34ff8f;
+    --killzone-dim: #17331f;
+    --chaos: #ff3d7f;
+    --chaos-dim: #33121e;
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+
+  html,body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+
+  /* scanline / crt atmosphere */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.025) 0px,
+      rgba(255,255,255,0.025) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    pointer-events:none;
+    z-index: 5;
+  }
+
+  .grid-bg{
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 20%, black 10%, transparent 75%);
+    opacity:0.5;
+    z-index:0;
+  }
+
+  header{
+    position:relative;
+    z-index:2;
+    text-align:center;
+    padding: 72px 24px 40px;
+  }
+
+  .eyebrow{
+    font-family:'Press Start 2P', monospace;
+    font-size:10px;
+    letter-spacing:3px;
+    color: var(--ink-dim);
+    margin-bottom:18px;
+  }
+
+  .eyebrow::before{ content:"▸ "; color: var(--killzone); }
+
+  h1{
+    font-family:'Press Start 2P', monospace;
+    font-size: clamp(24px, 6vw, 48px);
+    line-height:1.5;
+    letter-spacing: 1px;
+  }
+  h1 span{ color: var(--killzone); text-shadow: 0 0 18px rgba(52,255,143,0.45); }
+
+  .sub{
+    margin-top:20px;
+    color: var(--ink-dim);
+    font-size:15px;
+    max-width:480px;
+    margin-left:auto; margin-right:auto;
+  }
+
+  main{
+    position:relative;
+    z-index:2;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 20px 24px 100px;
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+
+  @media (max-width: 720px){
+    main{ grid-template-columns: 1fr; }
+  }
+
+  .cart{
+    position:relative;
+    background: var(--bg-alt);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 30px 26px 26px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    text-decoration:none;
+    color:inherit;
+    overflow:hidden;
+    transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+  }
+
+  .cart::after{
+    content:"";
+    position:absolute; top:0; left:0; right:0; height:4px;
+    background: var(--accent);
+    opacity:0.85;
+  }
+
+  .cart.kz{ --accent: var(--killzone); }
+  .cart.mc{ --accent: var(--chaos); }
+
+  .cart:hover{
+    transform: translateY(-6px);
+    border-color: var(--accent);
+    box-shadow: 0 14px 40px -18px var(--accent);
+  }
+
+  .slot{
+    font-family:'Press Start 2P', monospace;
+    font-size:10px;
+    color: var(--accent);
+    letter-spacing:2px;
+  }
+
+  .cart-title{
+    font-family:'Press Start 2P', monospace;
+    font-size: 20px;
+    line-height:1.5;
+  }
+
+  .cart-desc{
+    color: var(--ink-dim);
+    font-size: 14.5px;
+    line-height:1.6;
+    flex-grow:1;
+  }
+
+  .tags{
+    display:flex; gap:8px; flex-wrap:wrap;
+  }
+  .tag{
+    font-size:11px;
+    border:1px solid var(--line);
+    color: var(--ink-dim);
+    padding: 4px 9px;
+    border-radius: 20px;
+  }
+
+  .play{
+    margin-top:6px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-family:'Press Start 2P', monospace;
+    font-size:11px;
+    color: var(--accent);
+    padding-top:16px;
+    border-top: 1px dashed var(--line);
+  }
+
+  .play .arrow{ transition: transform .25s ease; }
+  .cart:hover .play .arrow{ transform: translateX(6px); }
+
+  .more{
+    grid-column: 1 / -1;
+    border: 1px dashed var(--line);
+    border-radius: 6px;
+    padding: 26px;
+    text-align:center;
+    color: var(--ink-dim);
+    font-size: 13.5px;
+  }
+  .more b{ color: var(--ink); }
+
+  footer{
+    position:relative; z-index:2;
+    text-align:center;
+    padding-bottom:40px;
+    color: var(--ink-dim);
+    font-size:12px;
+    letter-spacing:1px;
+  }
+</style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+
+  <header>
+    <div class="eyebrow">GAME SELECT</div>
+    <h1>GAME<span>HUB</span></h1>
+    <p class="sub">Alle Spiele an einem Ort. Kachel auswählen, Enter drücken, loslegen.</p>
+  </header>
+
+  <main>
+    <a class="cart kz" href="https://gameskillzone.github.io/Killzone/" target="_blank" rel="noopener">
+      <div class="slot">CARTRIDGE 01</div>
+      <div class="cart-title">KILLZONE<br>ONLINE</div>
+      <p class="cart-desc">Multiplayer Top-Down-Shooter im Browser. Ränge von Iron bis Legend, Skins, Waffen-Fähigkeiten und tägliche Quests.</p>
+      <div class="tags">
+        <span class="tag">Multiplayer</span>
+        <span class="tag">Shooter</span>
+        <span class="tag">Ranked</span>
+      </div>
+      <div class="play"><span>SPIELEN</span><span class="arrow">→</span></div>
+    </a>
+
+    <a class="cart mc" href="https://gameskillzone.github.io/Killzone/meinungschaos.html" target="_blank" rel="noopener">
+      <div class="slot">CARTRIDGE 02</div>
+      <div class="cart-title">MEINUNGS-<br>CHAOS</div>
+      <p class="cart-desc">Das Partyspiel für kontroverse Meinungen und chaotische Diskussionen. Wer stimmt zu, wer nicht?</p>
+      <div class="tags">
+        <span class="tag">Party</span>
+        <span class="tag">Chaos</span>
+      </div>
+      <div class="play"><span>SPIELEN</span><span class="arrow">→</span></div>
+    </a>
+
+    <div class="more">Weitere Spiele folgen <b>bald</b> — neue Cartridges werden hier eingesteckt.</div>
+  </main>
+
+  <footer>GAMEHUB — MADE WITH ♥ IN LUZERN</footer>
+</body>
+</html>
