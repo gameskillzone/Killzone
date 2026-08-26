@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meinungs-Chaos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<style>
+  :root{
+    --bg: #14171f;
+    --surface: #1c2030;
+    --surface-raised: #242a3d;
+    --line: #343b52;
+    --text: #edeae2;
+    --text-dim: #9aa0b8;
+    --agree: #5fbf8f;
+    --disagree: #d6552b;
+    --amber: #f2b84b;
+    --radius: 14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1100px 700px at 15% -10%, #1c2436 0%, transparent 60%),
+      radial-gradient(900px 600px at 110% 10%, #241c2a 0%, transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Space Grotesk', sans-serif;
+    min-height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .app{
+    width:100%;
+    max-width:760px;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:18px;
+  }
+  .eyebrow .code{
+    color:var(--amber);
+    letter-spacing:0.2em;
+  }
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:38px 36px;
+  }
+  h1.brand{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:38px;
+    margin:0 0 6px 0;
+    letter-spacing:-0.01em;
+  }
+  h1.brand span{ color:var(--amber); font-style:italic; font-weight:500;}
+  .sub{
+    color:var(--text-dim);
+    font-size:15px;
+    margin-bottom:30px;
+    line-height:1.5;
+  }
+  label{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    margin-bottom:8px;
+  }
+  input[type=text]{
+    width:100%;
+    background:var(--surface-raised);
+    border:1px solid var(--line);
+    color:var(--text);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:17px;
+    padding:13px 14px;
+    border-radius:10px;
+    outline:none;
+    margin-bottom:18px;
+  }
+  input[type=text]:focus{ border-color:var(--amber); }
+  input[type=text].code-input{
+    font-family:'IBM Plex Mono', monospace;
+    letter-spacing:0.3em;
+    text-transform:uppercase;
+    text-align:center;
+    font-size:22px;
+  }
+  button{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:500;
+    font-size:15px;
+    border:none;
+    border-radius:10px;
+    padding:13px 22px;
+    cursor:pointer;
+    transition:transform .08s ease, opacity .15s ease;
+  }
+  button:active{ transform:scale(0.97); }
+  button:disabled{ opacity:0.35; cursor:not-allowed; }
+  .btn-primary{
+    background:var(--amber);
+    color:#1a1508;
+    width:100%;
+  }
+  .btn-ghost{
+    background:transparent;
+    color:var(--text);
+    border:1px solid var(--line);
+    width:100%;
+  }
+  .row{ display:flex; gap:12px; }
+  .divider{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    color:var(--text-dim);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.1em;
+    margin:26px 0;
+  }
+  .divider::before,.divider::after{
+    content:"";
+    flex:1;
+    height:1px;
+    background:var(--line);
+  }
+  .error{
+    color:var(--disagree);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    margin-top:-10px;
+    margin-bottom:14px;
+    min-height:16px;
+  }
+
+  /* Lobby */
+  .code-display{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:52px;
+    letter-spacing:0.22em;
+    color:var(--amber);
+    text-align:center;
+    margin:6px 0 4px 0;
+  }
+  .code-hint{ text-align:center; color:var(--text-dim); font-size:13px; margin-bottom:28px;}
+  .players{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:26px; }
+  .chip{
+    background:var(--surface-raised);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:9px 16px;
+    font-size:14px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .chip .dot{ width:7px; height:7px; border-radius:50%; background:var(--agree); }
+  .chip.host .dot{ background:var(--amber); }
+
+  /* Statement / gauge */
+  .round-meta{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--text-dim);
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    margin-bottom:16px;
+  }
+  .statement{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-weight:500;
+    font-size:30px;
+    line-height:1.28;
+    margin:0 0 38px 0;
+    color:var(--text);
+  }
+  .gauge-wrap{ margin-bottom:14px; }
+  .gauge-labels{
+    display:flex;
+    justify-content:space-between;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.05em;
+    color:var(--text-dim);
+    margin-bottom:10px;
+  }
+  .gauge-labels .lo{ color:var(--disagree); }
+  .gauge-labels .hi{ color:var(--agree); }
+  .gauge{
+    position:relative;
+    height:54px;
+    display:flex;
+    align-items:center;
+  }
+  .gauge-track{
+    position:relative;
+    width:100%;
+    height:6px;
+    border-radius:3px;
+    background:linear-gradient(90deg, var(--disagree), var(--line) 50%, var(--agree));
+  }
+  .gauge-ticks{
+    position:absolute; top:-9px; left:0; right:0; height:6px;
+    display:flex; justify-content:space-between;
+    pointer-events:none;
+  }
+  .gauge-ticks i{ width:1px; height:8px; background:var(--line); display:block; }
+  input[type=range]{
+    position:absolute;
+    top:-18px; left:0;
+    width:100%;
+    -webkit-appearance:none;
+    background:transparent;
+    height:42px;
+    margin:0;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:26px; height:26px;
+    border-radius:50%;
+    background:var(--amber);
+    border:3px solid #1a1508;
+    box-shadow:0 2px 8px rgba(0,0,0,0.4);
+    cursor:pointer;
+    margin-top:6px;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:26px; height:26px;
+    border-radius:50%;
+    background:var(--amber);
+    border:3px solid #1a1508;
+    cursor:pointer;
+  }
+  .gauge-readout{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--amber);
+    text-align:center;
+    margin-top:20px;
+    margin-bottom:26px;
+  }
+  .waiting{
+    text-align:center;
+    color:var(--text-dim);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    padding:14px 0;
+  }
+  .timer-bar{
+    height:3px;
+    background:var(--line);
+    border-radius:2px;
+    overflow:hidden;
+    margin-bottom:24px;
+  }
+  .timer-fill{
+    height:100%;
+    background:var(--amber);
+    transition:width 0.3s linear;
+  }
+
+  /* Guess phase */
+  .target-block{ margin-bottom:30px; }
+  .target-name{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--amber);
+    margin-bottom:10px;
+    letter-spacing:0.05em;
+  }
+
+  /* Reveal */
+  .reveal-row{ margin-bottom:30px; }
+  .reveal-name{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-family:'IBM Plex Mono', monospace; font-size:13px;
+    margin-bottom:8px;
+  }
+  .reveal-name .pts{ color:var(--amber); }
+  .reveal-track{
+    position:relative; height:6px; border-radius:3px;
+    background:linear-gradient(90deg, var(--disagree), var(--line) 50%, var(--agree));
+    margin-bottom:6px;
+  }
+  .marker{
+    position:absolute; top:50%; width:16px; height:16px;
+    border-radius:50%; transform:translate(-50%,-50%);
+  }
+  .marker.actual{ background:var(--text); border:2px solid var(--surface); z-index:2; }
+  .marker.guess{ background:transparent; border:2px dashed var(--amber); z-index:1; }
+  .legend{ display:flex; gap:18px; font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--text-dim); margin-bottom:24px;}
+  .legend span{ display:flex; align-items:center; gap:6px; }
+  .legend .sw{ width:10px; height:10px; border-radius:50%; }
+  .legend .sw.actual{ background:var(--text); }
+  .legend .sw.guess{ border:2px dashed var(--amber); background:transparent; }
+
+  /* Leaderboard */
+  .board-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 0; border-bottom:1px solid var(--line);
+  }
+  .board-row:last-child{ border-bottom:none; }
+  .board-rank{
+    font-family:'IBM Plex Mono', monospace; color:var(--text-dim); width:28px; font-size:14px;
+  }
+  .board-name{ flex:1; font-size:16px; }
+  .board-score{ font-family:'IBM Plex Mono', monospace; color:var(--amber); font-size:16px; }
+  .board-row.win .board-name{ color:var(--amber); }
+
+  .hint-small{
+    text-align:center; color:var(--text-dim); font-size:13px; margin-top:18px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="eyebrow">
+    <span>MEINUNGS-CHAOS</span>
+    <span class="code" id="headerCode"></span>
+  </div>
+  <div class="card" id="card"></div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyB4VmoociiypVhBiYow2xlLvGC8bcDCXLQ",
+  authDomain: "killzone-ae24e.firebaseapp.com",
+  databaseURL: "https://killzone-ae24e-default-rtdb.firebaseio.com",
+  projectId: "killzone-ae24e",
+  storageBucket: "killzone-ae24e.firebasestorage.app",
+  messagingSenderId: "1045294401644",
+  appId: "1:1045294401644:web:bfdb5072281c00dc08f049",
+  measurementId: "G-EJKFXY9YRL"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+let authReady = false;
+let authError = null;
+
+const STATEMENTS = [
+  "Ananas gehört auf die Pizza.",
+  "Hausaufgaben sollten komplett abgeschafft werden.",
+  "Man sollte im Unterricht das Handy frei nutzen dürfen.",
+  "Frühaufstehen ist besser als Ausschlafen.",
+  "Ketchup gehört nicht zu Pommes, sondern Mayo.",
+  "Schulferien sind nie lang genug.",
+  "Gruppenarbeiten bringen mehr als Einzelarbeiten.",
+  "Man lernt mehr aus eigenen Fehlern als aus gutem Rat.",
+  "Serien bingen ist reine Zeitverschwendung.",
+  "Man sollte samstags Schule haben, dafür kürzere Sommerferien.",
+  "Perfektionismus bringt mehr Nachteile als Vorteile.",
+  "Man sollte Berufe nach Interesse statt nach Lohn wählen.",
+  "Ständig aufs Handy schauen macht einsamer.",
+  "Wer laut ist, hat es in der Klasse leichter.",
+  "Man sollte Noten durch schriftliches Feedback ersetzen.",
+  "Selbstständig lernen bringt mehr als Frontalunterricht.",
+  "Auf dem Land aufzuwachsen ist besser als in der Stadt.",
+  "Man erinnert sich später mehr an Ausflüge als an den Unterricht.",
+  "Kaffee schmeckt besser als er einem wirklich guttut.",
+  "Man sollte nie mit vollem Mund sprechen, egal wie eilig.",
+  "Zu zweit lernen bringt mehr als allein zu büffeln.",
+  "Wer zu spät kommt, sollte sich immer entschuldigen, egal wie oft es schon war.",
+  "Filme sind fast immer besser als das Buch dazu.",
+  "Man sollte öfter Dinge alleine unternehmen statt immer in der Gruppe.",
+  "Auswendiglernen bringt mehr als es wirklich zu verstehen.",
+  "Man sollte Trends nicht mitmachen, nur weil alle anderen es tun.",
+  "Ehrlichkeit ist wichtiger als Höflichkeit.",
+  "Wer zuerst 'Sorry' sagt, hat nicht automatisch unrecht.",
+  "Man sollte öfter auf sein Bauchgefühl hören als auf Ratschläge.",
+  "Man braucht keinen Plan für die Zukunft, um trotzdem glücklich zu sein.",
+  "Süssigkeiten zum Frühstück sind völlig okay.",
+  "Wer viel postet, denkt zu viel darüber nach, was andere denken.",
+  "Alte Freundschaften sind wertvoller als neue.",
+  "Man sollte lieber ehrlich verlieren als unfair gewinnen.",
+  "Musik hören beim Lernen hilft mehr, als es stört.",
+  "Ein spontaner Ausflug ist besser als einer, der lange geplant wurde.",
+  "Gaming ist genauso ein echtes Hobby wie Sport.",
+  "Ein Wochenende ohne Handy wäre entspannender als eines mit.",
+  "Man sollte öfter draussen unterwegs sein statt drinnen zu zocken.",
+  "Eine gute Playlist ist wichtiger für die Stimmung als der Ort selbst.",
+  "Reisen bildet mehr, als man in der Schule lernt.",
+  "Ein Konzert live ist immer besser als daheim Musik hören.",
+  "Man sollte öfter neue Hobbys ausprobieren, statt beim Bekannten zu bleiben.",
+  "Sport im Team macht mehr Spass als Sport alleine.",
+  "Ein freier Nachmittag ohne Plan ist besser als einer mit vollem Programm.",
+  "Man verbringt in den Ferien zu viel Zeit am Handy.",
+  "Ein gutes Game fesselt mehr als die beste Serie.",
+  "Man sollte öfter etwas ohne Erwartungen ausprobieren, auch wenn's daneben geht.",
+  "Freunde treffen ist besser als online mit ihnen chatten."
+];
+
+let state = {
+  screen: 'start',
+  code: null,
+  pid: null,
+  name: null,
+  roomData: null,
+  isHost: false,
+  submitVal: 50,
+  guessVals: {},
+  hostTimer: null,
+  countdownTimer: null
+};
+
+
+
+function genCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let c = '';
+  for(let i=0;i<4;i++) c += chars[Math.floor(Math.random()*chars.length)];
+  return c;
+}
+
+function render(){
+  document.getElementById('headerCode').textContent = state.code ? state.code : '';
+  const card = document.getElementById('card');
+  card.innerHTML = '';
+  if(state.screen === 'start') return renderStart(card);
+  if(state.screen === 'lobby') return renderLobby(card);
+  if(state.screen === 'submitting') return renderSubmitting(card);
+  if(state.screen === 'guessing') return renderGuessing(card);
+  if(state.screen === 'reveal') return renderReveal(card);
+  if(state.screen === 'finished') return renderFinished(card);
+}
+
+/* ---------- START ---------- */
+function renderStart(card){
+  card.innerHTML = `
+    <h1 class="brand">Meinungs<span>-Chaos</span></h1>
+    <p class="sub">Jeder stuft sich heimlich auf einer Skala ein. Du errätst, wo zwei Mitspieler stehen. Punkte für Treffsicherheit.</p>
+    <label>Dein Name</label>
+    <input type="text" id="nameInput" maxlength="16" placeholder="z.B. Mian" value="${state.name||''}">
+    <button class="btn-primary" id="createBtn">Raum erstellen</button>
+    <div class="divider">ODER BEITRETEN</div>
+    <label>Raum-Code</label>
+    <input type="text" id="codeInput" class="code-input" maxlength="4" placeholder="ABCD">
+    <div class="error" id="startErr"></div>
+    <button class="btn-ghost" id="joinBtn">Raum beitreten</button>
+  `;
+  document.getElementById('createBtn').onclick = () => doCreate();
+  document.getElementById('joinBtn').onclick = () => doJoin();
+}
+
+function doCreate(){
+  const name = document.getElementById('nameInput').value.trim();
+  if(!name){ setErr('startErr','Bitte gib einen Namen ein.'); return; }
+  state.name = name;
+  const code = genCode();
+  state.code = code;
+  state.isHost = true;
+  const roomRef = db.ref('meinungschaos/' + code);
+  roomRef.set({
+    status: 'lobby',
+    hostId: state.pid,
+    createdAt: Date.now(),
+    players: { [state.pid]: { name: name, score: 0 } }
+  }).then(()=>{
+    listenRoom();
+  }).catch(err=>{
+    console.error('Fehler beim Erstellen:', err);
+    setErr('startErr', 'Fehler: ' + err.message);
+  });
+}
+
+function doJoin(){
+  const name = document.getElementById('nameInput').value.trim();
+  const code = document.getElementById('codeInput').value.trim().toUpperCase();
+  if(!name){ setErr('startErr','Bitte gib einen Namen ein.'); return; }
+  if(code.length !== 4){ setErr('startErr','Code muss 4 Zeichen haben.'); return; }
+  const roomRef = db.ref('meinungschaos/' + code);
+  roomRef.once('value').then(snap=>{
+    const data = snap.val();
+    if(!data){ setErr('startErr','Diesen Raum gibt es nicht.'); return; }
+    if(data.status !== 'lobby'){ setErr('startErr','Spiel läuft bereits.'); return; }
+    state.name = name;
+    state.code = code;
+    state.isHost = (data.hostId === state.pid);
+    roomRef.child('players/' + state.pid).set({ name: name, score: 0 }).then(()=>{
+      listenRoom();
+    }).catch(err=>{
+      console.error('Fehler beim Beitreten:', err);
+      setErr('startErr', 'Fehler: ' + err.message);
+    });
+  }).catch(err=>{
+    console.error('Fehler beim Lesen:', err);
+    setErr('startErr', 'Fehler: ' + err.message);
+  });
+}
+
+function setErr(id, msg){
+  const el = document.getElementById(id);
+  if(el) el.textContent = msg;
+}
+
+/* ---------- ROOM LISTENER ---------- */
+function listenRoom(){
+  const roomRef = db.ref('meinungschaos/' + state.code);
+  roomRef.on('value', snap=>{
+    const data = snap.val();
+    if(!data) return;
+    state.roomData = data;
+    state.isHost = (data.hostId === state.pid);
+    syncScreen(data);
+    if(state.isHost) hostTick(data);
+  });
+}
+
+function syncScreen(data){
+  if(data.status === 'lobby') state.screen = 'lobby';
+  else if(data.status === 'playing'){
+    const phase = data.round ? data.round.phase : 'submitting';
+    state.screen = phase; // 'submitting' | 'guessing' | 'reveal'
+  } else if(data.status === 'finished'){
+    state.screen = 'finished';
+  }
+  render();
+}
+
+/* ---------- LOBBY ---------- */
+function renderLobby(card){
+  const players = state.roomData.players || {};
+  const ids = Object.keys(players);
+  card.innerHTML = `
+    <h1 class="brand">Meinungs<span>-Chaos</span></h1>
+    <p class="code-display">${state.code}</p>
+    <p class="code-hint">Mitspieler geben diesen Code beim Beitreten ein</p>
+    <div class="players" id="playerList"></div>
+    ${state.isHost ? `<button class="btn-primary" id="startBtn" ${ids.length < 3 ? 'disabled' : ''}>Spiel starten${ids.length<3 ? ' (min. 3 Spieler)' : ''}</button>`
+                   : `<p class="waiting">Warte, bis der Host das Spiel startet…</p>`}
+  `;
+  const list = document.getElementById('playerList');
+  ids.forEach(id=>{
+    const p = players[id];
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (id === state.roomData.hostId ? ' host' : '');
+    chip.innerHTML = `<span class="dot"></span>${p.name}${id===state.roomData.hostId?' (Host)':''}`;
+    list.appendChild(chip);
+  });
+  if(state.isHost){
+    const btn = document.getElementById('startBtn');
+    if(btn) btn.onclick = () => startGame();
+  }
+}
+
+function startGame(){
+  const ids = Object.keys(state.roomData.players);
+  const totalRounds = Math.min(ids.length, 8);
+  const shuffled = [...ids].sort(()=>Math.random()-0.5);
+  const guesserOrder = shuffled.slice(0, totalRounds);
+  const stmtIdx = [...Array(STATEMENTS.length).keys()].sort(()=>Math.random()-0.5).slice(0, totalRounds);
+  const roomRef = db.ref('meinungschaos/' + state.code);
+  roomRef.update({
+    status: 'playing',
+    totalRounds: totalRounds,
+    guesserOrder: guesserOrder,
+    statementOrder: stmtIdx,
+    roundIndex: 0
+  }).then(()=>{
+    beginRound(0, guesserOrder, stmtIdx);
+  });
+}
+
+function beginRound(i, guesserOrder, stmtIdx){
+  const roomRef = db.ref('meinungschaos/' + state.code);
+  roomRef.update({
+    roundIndex: i,
+    round: {
+      phase: 'submitting',
+      statementIndex: stmtIdx[i],
+      guesserId: guesserOrder[i],
+      deadline: Date.now() + 16000,
+      submissions: {},
+      guesses: {},
+      targets: null
+    }
+  });
+}
+
+/* ---------- HOST TICK (drives phase transitions) ---------- */
+function hostTick(data){
+  if(state.hostTimer) return; // already ticking
+  state.hostTimer = setInterval(()=>{
+    db.ref('meinungschaos/' + state.code).once('value').then(snap=>{
+      const d = snap.val();
+      if(!d || d.status !== 'playing' || !d.round) return;
+      const r = d.round;
+      const now = Date.now();
+      const playerIds = Object.keys(d.players);
+
+      if(r.phase === 'submitting'){
+        const subCount = r.submissions ? Object.keys(r.submissions).length : 0;
+        if(subCount >= playerIds.length || now >= r.deadline){
+          advanceToGuessing(d, r);
+        }
+      } else if(r.phase === 'guessing'){
+        const guessCount = r.guesses ? Object.keys(r.guesses).length : 0;
+        if(guessCount >= 2 || now >= r.deadline){
+          advanceToReveal(d, r);
+        }
+      } else if(r.phase === 'reveal'){
+        if(now >= (r.revealUntil || 0)){
+          advanceNextRound(d);
+        }
+      }
+    });
+  }, 900);
+}
+
+function advanceToGuessing(d, r){
+  const subs = r.submissions || {};
+  const candidates = Object.keys(subs).filter(id => id !== r.guesserId);
+  let targets;
+  if(candidates.length >= 2){
+    targets = [...candidates].sort(()=>Math.random()-0.5).slice(0,2);
+  } else {
+    const fallback = Object.keys(d.players).filter(id => id !== r.guesserId);
+    targets = fallback.slice(0,2);
+  }
+  db.ref('meinungschaos/' + state.code + '/round').update({
+    phase: 'guessing',
+    targets: targets,
+    deadline: Date.now() + 20000
+  });
+}
+
+function advanceToReveal(d, r){
+  const subs = r.submissions || {};
+  const guesses = r.guesses || {};
+  const targets = r.targets || [];
+  let pointsAwarded = {};
+  let scoreUpdates = {};
+  targets.forEach(tid=>{
+    const actual = subs[tid] !== undefined ? subs[tid] : 50;
+    const guess = guesses[tid] !== undefined ? guesses[tid] : 50;
+    const diff = Math.abs(actual - guess);
+    const pts = Math.max(0, Math.round((100 - diff) * 5));
+    pointsAwarded[tid] = pts;
+    scoreUpdates[r.guesserId] = (scoreUpdates[r.guesserId] || 0) + pts;
+  });
+  // participation points
+  Object.keys(subs).forEach(pid=>{
+    scoreUpdates[pid] = (scoreUpdates[pid] || 0) + 20;
+  });
+  const players = d.players;
+  const updates = {};
+  Object.keys(scoreUpdates).forEach(pid=>{
+    if(players[pid]){
+      updates['players/' + pid + '/score'] = (players[pid].score || 0) + scoreUpdates[pid];
+    }
+  });
+  updates['round/phase'] = 'reveal';
+  updates['round/pointsAwarded'] = pointsAwarded;
+  updates['round/revealUntil'] = Date.now() + 8000;
+  db.ref('meinungschaos/' + state.code).update(updates);
+}
+
+function advanceNextRound(d){
+  const next = (d.roundIndex || 0) + 1;
+  if(next >= d.totalRounds){
+    db.ref('meinungschaos/' + state.code).update({ status: 'finished' });
+  } else {
+    beginRound(next, d.guesserOrder, d.statementOrder);
+  }
+}
+
+/* ---------- SUBMITTING ---------- */
+function renderSubmitting(card){
+  const d = state.roomData;
+  const r = d.round;
+  const stmt = STATEMENTS[r.statementIndex];
+  const mySub = r.submissions ? r.submissions[state.pid] : undefined;
+  const subCount = r.submissions ? Object.keys(r.submissions).length : 0;
+  const total = Object.keys(d.players).length;
+
+  card.innerHTML = `
+    <div class="round-meta">Runde ${d.roundIndex+1} / ${d.totalRounds} — Wo stehst du?</div>
+    <p class="statement">„${stmt}"</p>
+    <div class="timer-bar"><div class="timer-fill" id="tfill"></div></div>
+    <div class="gauge-wrap">
+      <div class="gauge-labels"><span class="lo">stimme gar nicht zu</span><span class="hi">stimme voll zu</span></div>
+      <div class="gauge">
+        <div class="gauge-track">
+          <div class="gauge-ticks">${Array(11).fill('<i></i>').join('')}</div>
+        </div>
+        <input type="range" min="0" max="100" value="${state.submitVal}" id="slider" ${mySub!==undefined?'disabled':''}>
+      </div>
+    </div>
+    <div class="gauge-readout" id="readout">${state.submitVal}</div>
+    ${mySub===undefined
+      ? `<button class="btn-primary" id="subBtn">Abschicken</button>`
+      : `<div class="waiting">Abgeschickt. Warte auf die anderen… (${subCount}/${total})</div>`}
+  `;
+  const slider = document.getElementById('slider');
+  if(slider){
+    slider.oninput = (e)=>{
+      state.submitVal = parseInt(e.target.value);
+      document.getElementById('readout').textContent = state.submitVal;
+    };
+  }
+  const btn = document.getElementById('subBtn');
+  if(btn){
+    btn.onclick = ()=>{
+      db.ref('meinungschaos/' + state.code + '/round/submissions/' + state.pid).set(state.submitVal);
+    };
+  }
+  startCountdown(r.deadline);
+}
+
+/* ---------- GUESSING ---------- */
+function renderGuessing(card){
+  const d = state.roomData;
+  const r = d.round;
+  const stmt = STATEMENTS[r.statementIndex];
+  const amGuesser = (state.pid === r.guesserId);
+  const guesserName = d.players[r.guesserId] ? d.players[r.guesserId].name : '?';
+
+  if(!amGuesser){
+    card.innerHTML = `
+      <div class="round-meta">Runde ${d.roundIndex+1} / ${d.totalRounds}</div>
+      <p class="statement">„${stmt}"</p>
+      <div class="timer-bar"><div class="timer-fill" id="tfill"></div></div>
+      <div class="waiting">${guesserName} rät gerade, wo zwei Mitspieler stehen…</div>
+    `;
+    startCountdown(r.deadline);
+    return;
+  }
+
+  const targets = r.targets || [];
+  const guesses = r.guesses || {};
+  card.innerHTML = `
+    <div class="round-meta">Runde ${d.roundIndex+1} / ${d.totalRounds} — Du rätst!</div>
+    <p class="statement">„${stmt}"</p>
+    <div class="timer-bar"><div class="timer-fill" id="tfill"></div></div>
+    <div id="targetBlocks"></div>
+    <button class="btn-primary" id="guessBtn">Rateversuch abschicken</button>
+  `;
+  const blocks = document.getElementById('targetBlocks');
+  targets.forEach(tid=>{
+    const pname = d.players[tid] ? d.players[tid].name : '?';
+    if(state.guessVals[tid] === undefined) state.guessVals[tid] = 50;
+    const already = guesses[tid] !== undefined;
+    const block = document.createElement('div');
+    block.className = 'target-block';
+    block.innerHTML = `
+      <div class="target-name">Wo steht ${pname}?</div>
+      <div class="gauge">
+        <div class="gauge-track"><div class="gauge-ticks">${Array(11).fill('<i></i>').join('')}</div></div>
+        <input type="range" min="0" max="100" value="${state.guessVals[tid]}" data-tid="${tid}" class="guessSlider" ${already?'disabled':''}>
+      </div>
+      <div class="gauge-readout">${state.guessVals[tid]}</div>
+    `;
+    blocks.appendChild(block);
+  });
+  document.querySelectorAll('.guessSlider').forEach(s=>{
+    s.oninput = (e)=>{
+      const tid = e.target.getAttribute('data-tid');
+      state.guessVals[tid] = parseInt(e.target.value);
+      e.target.parentElement.nextElementSibling.textContent = state.guessVals[tid];
+    };
+  });
+  const gbtn = document.getElementById('guessBtn');
+  const alreadyGuessed = targets.every(tid => guesses[tid] !== undefined);
+  if(alreadyGuessed){
+    gbtn.disabled = true;
+    gbtn.textContent = 'Abgeschickt, warte auf Auswertung…';
+  } else {
+    gbtn.onclick = ()=>{
+      const updates = {};
+      targets.forEach(tid=>{
+        updates['round/guesses/' + tid] = state.guessVals[tid];
+      });
+      db.ref('meinungschaos/' + state.code).update(updates);
+      gbtn.disabled = true;
+      gbtn.textContent = 'Abgeschickt, warte auf Auswertung…';
+    };
+  }
+  startCountdown(r.deadline);
+}
+
+/* ---------- REVEAL ---------- */
+function renderReveal(card){
+  const d = state.roomData;
+  const r = d.round;
+  const stmt = STATEMENTS[r.statementIndex];
+  const targets = r.targets || [];
+  const subs = r.submissions || {};
+  const guesses = r.guesses || {};
+  const pts = r.pointsAwarded || {};
+  const guesserName = d.players[r.guesserId] ? d.players[r.guesserId].name : '?';
+
+  card.innerHTML = `
+    <div class="round-meta">Auflösung — Runde ${d.roundIndex+1} / ${d.totalRounds}</div>
+    <p class="statement">„${stmt}"</p>
+    <div class="legend">
+      <span><span class="sw actual"></span>echte Position</span>
+      <span><span class="sw guess"></span>${guesserName}s Tipp</span>
+    </div>
+    <div id="revealRows"></div>
+    <p class="hint-small">Nächste Runde startet gleich…</p>
+  `;
+  const rows = document.getElementById('revealRows');
+  targets.forEach(tid=>{
+    const pname = d.players[tid] ? d.players[tid].name : '?';
+    const actual = subs[tid] !== undefined ? subs[tid] : 50;
+    const guess = guesses[tid] !== undefined ? guesses[tid] : 50;
+    const p = pts[tid] !== undefined ? pts[tid] : 0;
+    const row = document.createElement('div');
+    row.className = 'reveal-row';
+    row.innerHTML = `
+      <div class="reveal-name"><span>${pname}</span><span class="pts">+${p} Pkt</span></div>
+      <div class="reveal-track">
+        <div class="marker actual" style="left:${actual}%"></div>
+        <div class="marker guess" style="left:${guess}%"></div>
+      </div>
+    `;
+    rows.appendChild(row);
+  });
+}
+
+/* ---------- FINISHED ---------- */
+function renderFinished(card){
+  const d = state.roomData;
+  const players = Object.entries(d.players).map(([id,p])=>({id, ...p}));
+  players.sort((a,b)=> (b.score||0) - (a.score||0));
+  card.innerHTML = `
+    <h1 class="brand">Spiel <span>vorbei</span></h1>
+    <p class="sub">So habt ihr euch geschlagen:</p>
+    <div id="board"></div>
+    ${state.isHost ? `<button class="btn-primary" id="againBtn" style="margin-top:24px;">Nochmal spielen</button>` : `<p class="waiting" style="margin-top:20px;">Warte auf den Host…</p>`}
+  `;
+  const board = document.getElementById('board');
+  players.forEach((p,i)=>{
+    const row = document.createElement('div');
+    row.className = 'board-row' + (i===0 ? ' win' : '');
+    row.innerHTML = `<span class="board-rank">${i+1}</span><span class="board-name">${p.name}</span><span class="board-score">${p.score||0}</span>`;
+    board.appendChild(row);
+  });
+  const btn = document.getElementById('againBtn');
+  if(btn){
+    btn.onclick = ()=>{
+      const resetPlayers = {};
+      Object.keys(d.players).forEach(id=>{
+        resetPlayers[id] = { name: d.players[id].name, score: 0 };
+      });
+      db.ref('meinungschaos/' + state.code).update({
+        status: 'lobby',
+        players: resetPlayers,
+        round: null
+      });
+    };
+  }
+}
+
+/* ---------- COUNTDOWN BAR ---------- */
+function startCountdown(deadline){
+  if(state.countdownTimer) clearInterval(state.countdownTimer);
+  const totalWindow = 20000;
+  const startedAt = deadline - totalWindow;
+  function tick(){
+    const fill = document.getElementById('tfill');
+    if(!fill){ clearInterval(state.countdownTimer); return; }
+    const now = Date.now();
+    const pct = Math.max(0, Math.min(100, ((deadline - now) / totalWindow) * 100));
+    fill.style.width = pct + '%';
+  }
+  tick();
+  state.countdownTimer = setInterval(tick, 300);
+}
+
+function renderLoading(card, msg){
+  card.innerHTML = `<h1 class="brand">Meinungs<span>-Chaos</span></h1><p class="sub">${msg}</p>`;
+}
+
+renderLoading(document.getElementById('card'), 'Verbinde…');
+auth.signInAnonymously().catch(err=>{
+  authError = err;
+  console.error('Anmeldefehler:', err);
+});
+auth.onAuthStateChanged(user=>{
+  console.log('Auth-Status:', user ? ('eingeloggt als ' + user.uid) : 'nicht eingeloggt');
+  if(user){
+    authReady = true;
+    state.pid = user.uid;
+    render();
+  } else if(authError){
+    renderLoading(document.getElementById('card'),
+      'Verbindung fehlgeschlagen: ' + authError.message +
+      '<br><br>Falls der Fehler "admin-restricted-operation" oder "operation-not-allowed" lautet: in der Firebase Console unter Authentication → Sign-in method muss "Anonym" aktiviert sein.');
+  }
+});
+setTimeout(()=>{
+  if(!authReady){
+    renderLoading(document.getElementById('card'),
+      'Die Anmeldung dauert ungewöhnlich lange oder hängt fest. Öffne die Browser-Konsole (F12) und schau nach Fehlermeldungen mit "firebase" oder "auth".');
+  }
+}, 6000);
+</script>
+</body>
+</html>
