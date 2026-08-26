@@ -8,7 +8,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <style>
   :root{
     --bg: #14171f;
@@ -357,9 +356,13 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-const auth = firebase.auth();
-let authReady = false;
-let authError = null;
+
+function uid(){
+  if(!sessionStorage.getItem('mc_pid')){
+    sessionStorage.setItem('mc_pid', 'p_' + Math.random().toString(36).slice(2,10));
+  }
+  return sessionStorage.getItem('mc_pid');
+}
 
 const STATEMENTS = [
   "Ananas gehört auf die Pizza.",
@@ -895,29 +898,8 @@ function renderLoading(card, msg){
   card.innerHTML = `<h1 class="brand">Meinungs<span>-Chaos</span></h1><p class="sub">${msg}</p>`;
 }
 
-renderLoading(document.getElementById('card'), 'Verbinde…');
-auth.signInAnonymously().catch(err=>{
-  authError = err;
-  console.error('Anmeldefehler:', err);
-});
-auth.onAuthStateChanged(user=>{
-  console.log('Auth-Status:', user ? ('eingeloggt als ' + user.uid) : 'nicht eingeloggt');
-  if(user){
-    authReady = true;
-    state.pid = user.uid;
-    render();
-  } else if(authError){
-    renderLoading(document.getElementById('card'),
-      'Verbindung fehlgeschlagen: ' + authError.message +
-      '<br><br>Falls der Fehler "admin-restricted-operation" oder "operation-not-allowed" lautet: in der Firebase Console unter Authentication → Sign-in method muss "Anonym" aktiviert sein.');
-  }
-});
-setTimeout(()=>{
-  if(!authReady){
-    renderLoading(document.getElementById('card'),
-      'Die Anmeldung dauert ungewöhnlich lange oder hängt fest. Öffne die Browser-Konsole (F12) und schau nach Fehlermeldungen mit "firebase" oder "auth".');
-  }
-}, 6000);
+state.pid = uid();
+render();
 </script>
 </body>
 </html>
