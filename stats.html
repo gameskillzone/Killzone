@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GameHub Stats</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;500;700&display=swap');
+
+  :root{
+    --bg: #0b0e13;
+    --bg-alt: #10141c;
+    --line: #232a36;
+    --ink: #e8ecf1;
+    --ink-dim: #7d8899;
+    --accent: #34ff8f;
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height:100vh;
+    padding: 60px 24px;
+  }
+
+  header{
+    text-align:center;
+    margin-bottom: 48px;
+  }
+
+  .eyebrow{
+    font-family:'Press Start 2P', monospace;
+    font-size:10px;
+    letter-spacing:3px;
+    color: var(--ink-dim);
+    margin-bottom:18px;
+  }
+  .eyebrow::before{ content:"▸ "; color: var(--accent); }
+
+  h1{
+    font-family:'Press Start 2P', monospace;
+    font-size: clamp(20px, 5vw, 34px);
+  }
+
+  main{
+    max-width: 900px;
+    margin: 0 auto;
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 22px;
+  }
+
+  .card{
+    background: var(--bg-alt);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 24px;
+  }
+
+  .game-name{
+    font-family:'Press Start 2P', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 20px;
+    text-transform: uppercase;
+  }
+
+  .stat-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--line);
+  }
+  .stat-row:last-child{ border-bottom:none; }
+
+  .stat-label{
+    color: var(--ink-dim);
+    font-size: 13px;
+  }
+
+  .stat-value{
+    font-family:'Press Start 2P', monospace;
+    font-size: 18px;
+  }
+
+  .loading{
+    text-align:center;
+    color: var(--ink-dim);
+    grid-column: 1 / -1;
+    padding: 40px;
+  }
+
+  .refresh-note{
+    text-align:center;
+    margin-top: 40px;
+    color: var(--ink-dim);
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+
+  <header>
+    <div class="eyebrow">LIVE STATS</div>
+    <h1>BESUCHER-ÜBERSICHT</h1>
+  </header>
+
+  <main id="stats-container">
+    <div class="loading">Lade Daten…</div>
+  </main>
+
+  <p class="refresh-note">Aktualisiert sich automatisch in Echtzeit.</p>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const firebaseConfig = {
+      databaseURL: "https://killzone-ae24e-default-rtdb.firebaseio.com"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const games = [
+      { key: "hub", label: "GameHub" },
+      { key: "killzone", label: "Killzone Online" },
+      { key: "meinungschaos", label: "Meinungs-Chaos" },
+      { key: "roulette", label: "Roulette" }
+    ];
+
+    const container = document.getElementById("stats-container");
+
+    const statsRef = ref(db, "stats");
+    onValue(statsRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      container.innerHTML = "";
+
+      games.forEach((game) => {
+        const gameData = data[game.key] || {};
+        const visits = gameData.visits || 0;
+        const uniqueCount = gameData.uniqueCount || 0;
+
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="game-name">${game.label}</div>
+          <div class="stat-row">
+            <span class="stat-label">Seitenaufrufe</span>
+            <span class="stat-value">${visits}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Eindeutige Besucher</span>
+            <span class="stat-value">${uniqueCount}</span>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    });
+  </script>
+
+</body>
+</html>
