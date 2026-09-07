@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Kessel &amp; Kredit — Online</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!--
+  ============================================================
+  SETUP (einmalig, dauert ~5 Minuten):
+  1. Gehe zu https://console.firebase.google.com und erstelle
+     ein kostenloses Projekt (Spark-Plan).
+  2. Im Projekt: "Build" -> "Realtime Database" -> "Datenbank erstellen".
+     Wähle beim Start "Testmodus" (offene Regeln) — das reicht für
+     eine private Runde mit Freunden. Nicht für sensible Daten nutzen.
+  3. "Projekteinstellungen" (Zahnrad) -> "Meine Apps" -> Web-App (</>) 
+     hinzufügen -> du bekommst ein Konfigurationsobjekt.
+  4. Kopiere dieses Objekt hier unten in FIREBASE_CONFIG.
+  5. Lade diese Datei z.B. auf GitHub Pages, Netlify oder Vercel hoch
+     (alle kostenlos) — fertig, jedes Gerät kann jetzt über die URL
+     im selben Raum spielen.
+  ============================================================
+-->
+<script>
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyBAna3AsSLDEMbnuRH-BAzeoJs9WZz2GbQ",
+    authDomain: "gambling-ace28.firebaseapp.com",
+    databaseURL: "https://gambling-ace28-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "gambling-ace28",
+    storageBucket: "gambling-ace28.firebasestorage.app",
+    messagingSenderId: "946931919317",
+    appId: "1:946931919317:web:79629c4f6b4b439452755c"
+  };
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --felt-deep:#0c3b2e; --felt-dark:#082720; --gold:#c9a227; --gold-soft:#e4c86b;
+    --cream:#f1ead9; --cream-dim:#c9c0a9; --red:#a4231d; --black:#15120e;
+    --green:#0f6b41; --danger:#c94a3a; --panel:#0a2d23;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:radial-gradient(ellipse at 50% -10%, rgba(228,200,107,0.08), transparent 60%), var(--felt-deep);
+    color:var(--cream); font-family:'Inter',sans-serif; min-height:100vh; padding:28px 20px 60px;
+  }
+  h1,h2,h3{font-family:'Fraunces',serif; margin:0; font-weight:600;}
+  .wrap{max-width:1180px;margin:0 auto;}
+  .masthead{display:flex; align-items:baseline; justify-content:space-between; border-bottom:1px solid rgba(228,200,107,0.35); padding-bottom:14px; margin-bottom:22px; flex-wrap:wrap; gap:10px;}
+  .masthead h1{font-size:30px; color:var(--gold-soft);}
+  .masthead .sub{font-size:13px; color:var(--cream-dim); margin-top:4px;}
+  .round-badge{font-family:'Fraunces',serif; font-size:15px; border:1px solid rgba(228,200,107,0.4); padding:6px 14px;}
+  .room-badge{font-family:'Fraunces',serif; font-size:15px; border:1px solid var(--gold); padding:6px 14px; color:var(--gold-soft); cursor:pointer;}
+
+  .center-card{max-width:460px; margin:60px auto; background:var(--panel); border:1px solid rgba(228,200,107,0.25); padding:32px 30px;}
+  .center-card h2{font-size:22px; color:var(--gold-soft); margin-bottom:6px;}
+  .center-card p.lead{color:var(--cream-dim); font-size:14px; margin:0 0 20px;}
+  .field{margin-bottom:14px;}
+  .field label{font-size:12px; color:var(--cream-dim); display:block; margin-bottom:5px;}
+  .field input{width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(228,200,107,0.3); color:var(--cream); padding:10px 12px; font-size:14px;}
+  .field input:focus{outline:1px solid var(--gold);}
+  .tabs{display:flex; gap:8px; margin-bottom:18px;}
+  .tab{flex:1; text-align:center; padding:8px; border:1px solid rgba(228,200,107,0.3); cursor:pointer; font-size:13px; color:var(--cream-dim);}
+  .tab.active{background:var(--gold); color:var(--felt-dark); border-color:var(--gold); font-weight:600;}
+
+  .btn{font-family:'Inter'; font-weight:600; font-size:14px; cursor:pointer; border:1px solid var(--gold); background:transparent; color:var(--gold-soft); padding:10px 18px; transition:background .15s, color .15s;}
+  .btn:hover:not(:disabled){background:var(--gold); color:var(--felt-dark);}
+  .btn:disabled{opacity:0.35; cursor:not-allowed;}
+  .btn.primary{background:var(--gold); color:var(--felt-dark);}
+  .btn.primary:hover:not(:disabled){background:var(--gold-soft);}
+  .btn.small{padding:6px 12px; font-size:12.5px;}
+  .btn.ghost{border-color:rgba(228,200,107,0.3); color:var(--cream-dim);}
+  .btn.wide{width:100%;}
+  .err-msg{color:var(--danger); font-size:13px; margin:10px 0; min-height:16px;}
+
+  .lobby-list{margin:16px 0;}
+  .lobby-row{display:flex; justify-content:space-between; padding:8px 10px; border:1px solid rgba(228,200,107,0.15); margin-bottom:6px; font-size:14px;}
+
+  .game-grid{display:grid; grid-template-columns:1fr 300px; gap:24px; align-items:start;}
+  @media (max-width:880px){ .game-grid{grid-template-columns:1fr;} }
+  .history-strip{display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap;}
+  .hist-chip{width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--cream); border:1px solid rgba(0,0,0,0.3);}
+
+  .wheel-zone{display:flex; flex-direction:column; align-items:center; gap:16px; background:var(--panel); border:1px solid rgba(228,200,107,0.2); padding:26px 20px 22px; margin-bottom:22px;}
+  .wheel-outer{position:relative; width:220px; height:220px;}
+  .wheel-pointer{position:absolute; top:-10px; left:50%; transform:translateX(-50%); width:0; height:0; border-left:9px solid transparent; border-right:9px solid transparent; border-top:16px solid var(--gold-soft); z-index:3;}
+  .wheel-disc{width:220px; height:220px; border-radius:50%; border:6px solid var(--gold); box-shadow:0 0 0 2px var(--felt-dark), 0 8px 26px rgba(0,0,0,0.5); transition:transform 6.8s cubic-bezier(.12,.72,.14,1);}
+  .wheel-hub{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:44px; height:44px; border-radius:50%; background:var(--felt-dark); border:3px solid var(--gold-soft); display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-weight:700; font-size:16px; color:var(--gold-soft); z-index:2;}
+  .result-line{font-family:'Fraunces',serif; font-size:15px; color:var(--cream-dim); min-height:20px; text-align:center;}
+  .result-line b{color:var(--gold-soft);}
+
+  .table-zone{background:var(--panel); border:1px solid rgba(228,200,107,0.2); padding:18px;}
+  .numbers-area{display:flex; gap:4px;}
+  .zero-btn{width:44px; background:var(--green); border:1px solid rgba(0,0,0,0.4); color:var(--cream); font-family:'Fraunces',serif; font-weight:600; font-size:16px; cursor:pointer; position:relative;}
+  .numbers-grid{flex:1; display:flex; flex-direction:column; gap:4px;}
+  .num-row{display:flex; gap:4px;}
+  .num-btn{flex:1; aspect-ratio:1.5/1; border:1px solid rgba(0,0,0,0.4); color:var(--cream); font-family:'Inter'; font-weight:600; font-size:13px; cursor:pointer; position:relative;}
+  .num-btn.red{background:var(--red);} .num-btn.black{background:var(--black);}
+  .col-btn{width:52px; background:rgba(228,200,107,0.08); border:1px solid rgba(228,200,107,0.3); color:var(--cream-dim); font-size:11px; cursor:pointer;}
+  .bet-btn{flex:1; background:rgba(228,200,107,0.08); border:1px solid rgba(228,200,107,0.3); color:var(--cream-dim); font-family:'Inter'; font-weight:600; font-size:12.5px; padding:11px 4px; cursor:pointer; text-align:center;}
+  .bet-btn:hover:not(:disabled), .num-btn:hover:not(:disabled), .zero-btn:hover:not(:disabled), .col-btn:hover:not(:disabled){filter:brightness(1.25);}
+  .bet-btn:disabled, .num-btn:disabled, .zero-btn:disabled, .col-btn:disabled{opacity:0.45; cursor:not-allowed;}
+  .stake-badge{position:absolute; bottom:2px; right:2px; background:var(--gold); color:var(--felt-dark); font-size:9.5px; font-weight:700; padding:1px 4px; border-radius:8px; line-height:1.4;}
+
+  .chip-row{display:flex; align-items:center; gap:8px; margin-top:16px; flex-wrap:wrap;}
+  .chip{width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:700; cursor:pointer; border:2px solid var(--felt-dark); font-family:'Fraunces',serif; color:var(--felt-dark);}
+  .chip.active{outline:2px solid var(--gold-soft); outline-offset:2px;}
+  .table-controls{display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;}
+
+  .sidebar{display:flex; flex-direction:column; gap:16px;}
+  .players-panel{background:var(--panel); border:1px solid rgba(228,200,107,0.2); padding:16px;}
+  .players-panel h3{font-size:14px; color:var(--gold-soft); margin-bottom:10px;}
+  .player-card{padding:10px 10px; border:1px solid rgba(228,200,107,0.12); margin-bottom:8px; background:rgba(255,255,255,0.02); position:relative;}
+  .player-card.active{border-color:var(--gold); background:rgba(228,200,107,0.07);}
+  .player-card.me{border-left:3px solid var(--gold-soft);}
+  .pname{font-weight:600; font-size:14px; display:flex; justify-content:space-between; align-items:center;}
+  .pname .turn-tag{font-size:10px; color:var(--felt-dark); background:var(--gold-soft); padding:1px 6px; border-radius:8px; font-weight:700;}
+  .pbalance{font-size:13px; color:var(--cream-dim); margin-top:3px;} .pbalance b{color:var(--cream);}
+  .pdebt{font-size:12px; color:var(--danger); margin-top:2px;}
+
+  .turn-panel{background:var(--panel); border:1px solid rgba(228,200,107,0.25); padding:16px;}
+  .turn-panel h3{font-size:14px; color:var(--gold-soft); margin-bottom:8px;}
+  .turn-panel .stake-total{font-size:13px; color:var(--cream-dim); margin-bottom:10px;}
+  .loan-box{margin-top:12px; padding-top:12px; border-top:1px dashed rgba(228,200,107,0.2);}
+  .loan-box label{font-size:11.5px; color:var(--cream-dim); display:block; margin-bottom:6px;}
+  .loan-row{display:flex; gap:6px; margin-bottom:8px;}
+  .loan-row input{width:70px; background:rgba(255,255,255,0.04); border:1px solid rgba(228,200,107,0.3); color:var(--cream); padding:6px 8px; font-size:13px;}
+  .quick-loans{display:flex; gap:6px; margin-bottom:10px;}
+  .msg-box{font-size:12.5px; color:var(--danger); min-height:16px; margin-top:6px;}
+  .waiting-note{font-size:13px; color:var(--cream-dim); padding:10px 0;}
+
+  .footer-actions{display:flex; justify-content:space-between; margin-top:22px; align-items:center;}
+  .overlay{position:fixed; inset:0; background:rgba(4,16,12,0.82); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px;}
+  .result-modal{background:var(--panel); border:1px solid var(--gold); max-width:440px; width:100%; padding:28px 26px;}
+  .result-modal h2{font-size:22px; color:var(--gold-soft); margin-bottom:2px;}
+  .result-modal .num-display{display:inline-flex; align-items:center; justify-content:center; width:46px; height:46px; border-radius:50%; font-family:'Fraunces',serif; font-weight:700; font-size:20px; color:var(--cream); margin:10px 0 16px;}
+  .payout-row{display:flex; justify-content:space-between; font-size:13.5px; padding:6px 0; border-bottom:1px solid rgba(228,200,107,0.1);}
+  .payout-row .amt.pos{color:#7fd9a1;} .payout-row .amt.neg{color:var(--danger);}
+  .interest-note{font-size:12px; color:var(--cream-dim); margin-top:12px;}
+  .small-muted{font-size:11.5px; color:var(--cream-dim);}
+  .conn-dot{width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px;}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+/* ================= CONSTANTS ================= */
+const WHEEL_ORDER = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+const RED_NUMBERS = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+const CHIP_VALUES = [10,25,50,100,250,500];
+const SPIN_MS = 6900;
+
+function numberColor(n){ if(n===0) return 'green'; return RED_NUMBERS.has(n) ? 'red' : 'black'; }
+function colorHex(c){ return c==='red' ? 'var(--red)' : c==='black' ? 'var(--black)' : 'var(--green)'; }
+function labelColor(c){ return c==='red'?'Rot':c==='black'?'Schwarz':'Grün'; }
+function fmt(n){ return (Math.round(n*100)/100).toLocaleString('de-DE'); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+/* ================= FIREBASE ================= */
+let db = null, firebaseReady = false, firebaseError = '';
+try{
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.database();
+  firebaseReady = true;
+}catch(e){ firebaseError = e.message; }
+
+let roomRef = null;
+
+/* ================= LOCAL (per-device) STATE ================= */
+let local = {
+  phase:'entry',        // entry | lobby | game
+  name:'', roomCodeInput:'', roomCode:'', myPlayerId:null,
+  chip:10, msg:'', connError:'',
+  wheelRotation:0, lastAnimatedSeq:-1, revealedSeq:-1, spinTimer:null,
+  loanVal:100, repayVal:100
+};
+let shared = null; // latest DB snapshot of rooms/{code}/state
+
+function getOrCreatePlayerId(code){
+  const key = 'rk_pid_'+code;
+  try{
+    let id = sessionStorage.getItem(key);
+    if(!id){ id = 'pl_'+Math.random().toString(36).slice(2,10); sessionStorage.setItem(key,id); }
+    return id;
+  }catch(e){
+    if(!window.__fallbackIds) window.__fallbackIds = {};
+    if(!window.__fallbackIds[code]) window.__fallbackIds[code] = 'pl_'+Math.random().toString(36).slice(2,10);
+    return window.__fallbackIds[code];
+  }
+}
+
+/* ================= ROOM ACTIONS ================= */
+function initialRoomState(){
+  return {
+    phase:'lobby', players:{}, playerOrder:[], round:1, currentIdx:0,
+    roundBets:{}, locked:{}, bettingOpen:true, spinning:false, spinSeq:0,
+    lastResult:null, history:[], lastRoundChanges:null
+  };
+}
+
+function joinRoom(){
+  const name = local.name.trim();
+  const code = local.roomCodeInput.trim().toUpperCase();
+  if(!name){ local.msg='Bitte einen Namen eingeben.'; render(); return; }
+  if(!code || code.length<3){ local.msg='Bitte einen Raum-Code (mind. 3 Zeichen) eingeben.'; render(); return; }
+  if(!firebaseReady){ local.msg='Firebase ist nicht konfiguriert (siehe Kommentar am Dateianfang).'; render(); return; }
+
+  local.name = name; local.roomCode = code;
+  local.myPlayerId = getOrCreatePlayerId(code);
+  roomRef = db.ref('rooms/'+code+'/state');
+
+  roomRef.transaction(cur=>{
+    if(cur===null) cur = initialRoomState();
+    if(!cur.players) cur.players = {};
+    if(!cur.playerOrder) cur.playerOrder = [];
+    if(!cur.players[local.myPlayerId]){
+      if(cur.playerOrder.length>=10) return cur;
+      cur.players[local.myPlayerId] = { name, balance:1000, debt:0 };
+      cur.playerOrder.push(local.myPlayerId);
+      cur.roundBets = cur.roundBets || {};
+      cur.locked = cur.locked || {};
+      cur.roundBets[local.myPlayerId] = [];
+      cur.locked[local.myPlayerId] = false;
+    } else {
+      cur.players[local.myPlayerId].name = name;
+    }
+    return cur;
+  }, (err)=>{
+    if(err){ local.msg='Verbindungsfehler: '+err.message; render(); return; }
+    local.msg='';
+    attachListener();
+  });
+}
+
+function attachListener(){
+  roomRef.on('value', snap=>{
+    shared = snap.val();
+    if(shared){
+      local.phase = shared.phase==='playing' ? 'game' : 'lobby';
+    }
+    render();
+  });
+}
+
+function createNewCode(){
+  local.roomCodeInput = Math.random().toString(36).slice(2,6).toUpperCase();
+  render();
+}
+
+function leaveRoom(){
+  if(roomRef) roomRef.off();
+  roomRef = null; shared = null;
+  local.phase='entry'; local.roomCode=''; local.msg='';
+  render();
+}
+
+function startGame(){
+  if(!roomRef) return;
+  roomRef.transaction(cur=>{
+    if(!cur) return cur;
+    if(cur.playerOrder.length<2) return cur;
+    cur.phase='playing'; cur.round=1; cur.currentIdx=0;
+    cur.bettingOpen=true; cur.spinning=false; cur.spinSeq=cur.spinSeq||0;
+    cur.history = cur.history || []; cur.lastResult=null; cur.lastRoundChanges=null;
+    return cur;
+  });
+}
+
+function isMyTurn(){
+  if(!shared || !shared.playerOrder || !shared.playerOrder.length) return false;
+  return shared.playerOrder[shared.currentIdx] === local.myPlayerId;
+}
+function myPlayer(){ return shared && shared.players ? shared.players[local.myPlayerId] : null; }
+function stakeOn(pid, sel){
+  const bets = (shared.roundBets && shared.roundBets[pid]) || [];
+  return bets.filter(b=>b.sel===sel).reduce((s,b)=>s+b.amount,0);
+}
+function totalStake(pid){
+  const bets = (shared.roundBets && shared.roundBets[pid]) || [];
+  return bets.reduce((s,b)=>s+b.amount,0);
+}
+
+function placeBet(sel){
+  if(!roomRef) return;
+  roomRef.transaction(cur=>{
+    if(!cur || cur.phase!=='playing') return cur;
+    cur.roundBets = cur.roundBets || {};
+    cur.locked = cur.locked || {};
+    if(cur.playerOrder[cur.currentIdx] !== local.myPlayerId) return; // not my turn -> abort
+    if(!cur.bettingOpen || cur.locked[local.myPlayerId]) return;
+    const bal = cur.players[local.myPlayerId].balance;
+    const amount = local.chip==='all' ? bal : local.chip;
+    if(amount<=0 || amount>bal) return;
+    cur.players[local.myPlayerId].balance -= amount;
+    cur.roundBets[local.myPlayerId] = cur.roundBets[local.myPlayerId] || [];
+    cur.roundBets[local.myPlayerId].push({sel, amount});
+    return cur;
+  });
+}
+
+function undoLastBet(){
+  if(!roomRef) return;
+  roomRef.transaction(cur=>{
+    if(!cur) return cur;
+    cur.roundBets = cur.roundBets || {};
+    cur.locked = cur.locked || {};
+    if(cur.playerOrder[cur.currentIdx] !== local.myPlayerId || cur.locked[local.myPlayerId]) return;
+    const arr = cur.roundBets[local.myPlayerId] || [];
+    if(!arr.length) return cur;
+    const last = arr.pop();
+    cur.players[local.myPlayerId].balance += last.amount;
+    return cur;
+  });
+}
+function clearBets(){
+  if(!roomRef) return;
+  roomRef.transaction(cur=>{
+    if(!cur) return cur;
+    cur.roundBets = cur.roundBets || {};
+    cur.locked = cur.locked || {};
+    if(cur.playerOrder[cur.currentIdx] !== local.myPlayerId || cur.locked[local.myPlayerId]) return;
+    const arr = cur.roundBets[local.myPlayerId] || [];
+    const refund = arr.reduce((s,b)=>s+b.amount,0);
+    cur.players[local.myPlayerId].balance += refund;
+    cur.roundBets[local.myPlayerId] = [];
+    return cur;
+  });
+}
+
+function advanceTurnInPlace(cur){
+  const allLocked = cur.playerOrder.every(id=>cur.locked[id]);
+  if(allLocked){ cur.bettingOpen = false; return; }
+  let next = (cur.currentIdx+1) % cur.playerOrder.length;
+  let guard = 0;
+  while(cur.locked[cur.playerOrder[next]] && guard<50){ next=(next+1)%cur.playerOrder.length; guard++; }
+  cur.currentIdx = next;
+}
+
+function lockInPlayer(){
+  if(!roomRef) return;
+  roomRef.transaction(cur=>{
+    if(!cur) return cur;
+    cur.roundBets = cur.roundBets || {};
+    cur.locked = cur.locked || {};
+    if(cur.playerOrder[cur.currentIdx] !== local.myPlayerId) return;
+    cur.locked[local.myPlayerId] = true;
+    advanceTurnInPlace(cur);
+    return cur;
+  });
+}
+function passTurn(){
+  if(!roomRef) return;
+  roomRef.transaction(cur=>{
+    if(!cur) return cur;
+    cur.roundBets = cur.roundBets || {};
+    cur.locked = cur.locked || {};
+    if(cur.playerOrder[cur.currentIdx] !== local.myPlayerId) return;
+    const arr = cur.roundBets[local.myPlayerId] || [];
+    const refund = arr.reduce((s,b)=>s+b.amount,0);
+    cur.players[local.myPlayerId].balance += refund;
+    cur.roundBets[local.myPlayerId] = [];
+    cur.locked[local.myPlayerId] = true;
+    advanceTurnInPlace(cur);
+    return cur;
+  });
+}
+
+function takeLoan(amount){
+  amount = Math.round(Number(amount));
+  if(!roomRef || !amount || amount<=0){ local.msg='Bitte gültigen Betrag eingeben.'; render(); return; }
+  roomRef.transaction(cur=>{
+    if(!cur) return cur;
+    if(cur.playerOrder[cur.currentIdx] !== local.myPlayerId) return;
+    cur.players[local.myPlayerId].balance += amount;
+    cur.players[local.myPlayerId].debt += amount;
+    return cur;
+  });
+}
+function repayDebt(amount){
+  amount = Math.round(Number(amount));
+  if(!roomRef || !amount || amount<=0) return;
+  roomRef.transaction(cur=>{
+    if(!cur) return cur;
+    if(cur.playerOrder[cur.currentIdx] !== local.myPlayerId) return;
+    if(!cur.players[local.myPlayerId]) return;
+    const p = cur.players[local.myPlayerId];
+    const pay = Math.min(amount, p.debt, p.balance);
+    if(pay<=0) return cur;
+    p.balance -= pay; p.debt -= pay;
+    return cur;
+  });
+}
+
+function evaluateBet(sel, result){
+  if(result===0) return sel==='num:0' ? 35 : 0;
+  if(sel==='num:'+result) return 35;
+  if(sel==='red') return numberColor(result)==='red' ? 1 : 0;
+  if(sel==='black') return numberColor(result)==='black' ? 1 : 0;
+  if(sel==='odd') return result%2===1 ? 1 : 0;
+  if(sel==='even') return result%2===0 ? 1 : 0;
+  if(sel==='low') return result>=1 && result<=18 ? 1 : 0;
+  if(sel==='high') return result>=19 && result<=36 ? 1 : 0;
+  if(sel==='dozen1') return result>=1 && result<=12 ? 2 : 0;
+  if(sel==='dozen2') return result>=13 && result<=24 ? 2 : 0;
+  if(sel==='dozen3') return result>=25 && result<=36 ? 2 : 0;
+  if(sel==='col1') return result%3===1 ? 2 : 0;
+  if(sel==='col2') return result%3===2 ? 2 : 0;
+  if(sel==='col3') return result%3===0 ? 2 : 0;
+  return 0;
+}
+
+function spinWheel(){
+  if(!roomRef) return;
+  roomRef.transaction(cur=>{
+    if(!cur) return cur;
+    cur.roundBets = cur.roundBets || {};
+    if(cur.bettingOpen || cur.spinning) return;
+    const result = Math.floor(Math.random()*37);
+    const changes = [];
+    cur.playerOrder.forEach(pid=>{
+      const p = cur.players[pid];
+      const bets = cur.roundBets[pid] || [];
+      let won = 0;
+      bets.forEach(b=>{ const payout = evaluateBet(b.sel, result); if(payout>0) won += b.amount*(payout+1); });
+      const staked = bets.reduce((s,b)=>s+b.amount,0);
+      p.balance += won;
+      changes.push({ name:p.name, net: won-staked });
+    });
+    cur.history = cur.history || [];
+    cur.history.unshift({ num:result, color:numberColor(result) });
+    if(cur.history.length>12) cur.history = cur.history.slice(0,12);
+    cur.lastResult = result;
+    cur.lastRoundChanges = changes;
+    cur.spinning = true;
+    cur.spinSeq = (cur.spinSeq||0)+1;
+    return cur;
+  });
+}
+
+function nextRound(){
+  if(!roomRef) return;
+  roomRef.transaction(cur=>{
+    if(!cur) return cur;
+    cur.playerOrder.forEach(pid=>{
+      const p = cur.players[pid];
+      if(p.debt>0) p.debt = Math.round(p.debt*1.02*100)/100;
+    });
+    cur.round = (cur.round||1)+1;
+    cur.roundBets = {}; cur.locked = {};
+    cur.playerOrder.forEach(pid=>{ cur.roundBets[pid]=[]; cur.locked[pid]=false; });
+    cur.currentIdx = cur.round % cur.playerOrder.length;
+    cur.bettingOpen = true; cur.spinning = false;
+    return cur;
+  });
+}
+
+function resetToEntry(){
+  if(!confirm('Diesen Raum verlassen?')) return;
+  leaveRoom();
+}
+
+/* ================= RENDER ================= */
+function render(){
+  const app = document.getElementById('app');
+  if(local.phase==='entry') app.innerHTML = renderEntry();
+  else if(!shared) app.innerHTML = renderConnecting();
+  else if(local.phase==='lobby') app.innerHTML = renderLobby();
+  else app.innerHTML = renderGame();
+
+  const disc = document.getElementById('wheelDisc');
+  if(disc) disc.style.transform = 'rotate('+local.wheelRotation+'deg)';
+
+  // handle spin animation trigger (per-device, cosmetic)
+  if(shared && shared.spinning && shared.spinSeq !== local.lastAnimatedSeq){
+    local.lastAnimatedSeq = shared.spinSeq;
+    const idx = WHEEL_ORDER.indexOf(shared.lastResult);
+    const seg = 360/37;
+    const pocketAngle = idx*seg + seg/2;
+    const spins = 9 + Math.floor(Math.random()*3);
+    local.wheelRotation += spins*360 + (360 - pocketAngle);
+    if(disc) requestAnimationFrame(()=>{ disc.style.transform = 'rotate('+local.wheelRotation+'deg)'; });
+    clearTimeout(local.spinTimer);
+    local.spinTimer = setTimeout(()=>{ local.revealedSeq = shared.spinSeq; render(); }, SPIN_MS);
+  }
+  if(shared && !shared.spinning){ local.revealedSeq = -1; }
+}
+
+function renderConnecting(){
+  return `
+    <div class="masthead"><div><h1>Kessel &amp; Kredit</h1><div class="sub">Online-Roulette</div></div></div>
+    <div class="center-card"><p class="lead">Verbinde mit Raum ${escapeHtml(local.roomCode)}…</p></div>`;
+}
+
+function renderEntry(){
+  return `
+    <div class="masthead"><div><h1>Kessel &amp; Kredit</h1><div class="sub">Online-Roulette für 2–10 Spieler</div></div></div>
+    <div class="center-card">
+      <h2>Raum beitreten</h2>
+      <p class="lead">Alle Geräte, die denselben Raum-Code eingeben, spielen zusammen — live synchronisiert.</p>
+      ${!firebaseReady ? `<div class="err-msg">Firebase ist nicht eingerichtet. Bitte FIREBASE_CONFIG am Dateianfang ausfüllen.</div>` : ''}
+      <div class="field"><label>Dein Name</label><input type="text" value="${escapeHtml(local.name)}" oninput="local.name=this.value" placeholder="z.B. Alex"></div>
+      <div class="field">
+        <label>Raum-Code (mit anderen teilen)</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" value="${escapeHtml(local.roomCodeInput)}" oninput="local.roomCodeInput=this.value" placeholder="z.B. AB12" style="text-transform:uppercase;">
+          <button class="btn ghost small" onclick="createNewCode()">Neu</button>
+        </div>
+      </div>
+      <div class="err-msg">${local.msg}</div>
+      <button class="btn primary wide" onclick="joinRoom()">Beitreten / Raum erstellen</button>
+    </div>`;
+}
+
+function renderLobby(){
+  const players = (shared.playerOrder||[]).map(pid=>shared.players[pid]);
+  const rows = players.map(p=>`<div class="lobby-row">${escapeHtml(p.name)}<span class="small-muted">1000 Kapital</span></div>`).join('');
+  const canStart = players.length>=2;
+  return `
+    <div class="masthead">
+      <div><h1>Kessel &amp; Kredit</h1><div class="sub">Warteraum</div></div>
+      <div class="room-badge" onclick="copyRoomLink()">Raum: ${escapeHtml(local.roomCode)} · klicken zum Kopieren</div>
+    </div>
+    <div class="center-card">
+      <h2>Warten auf Mitspieler</h2>
+      <p class="lead">Teile den Code <b style="color:var(--gold-soft)">${escapeHtml(local.roomCode)}</b> — jede:r öffnet diese Seite und tritt mit dem gleichen Code bei.</p>
+      <div class="lobby-list">${rows || '<div class="small-muted">Noch niemand da…</div>'}</div>
+      <button class="btn primary wide" ${canStart?'':'disabled'} onclick="startGame()">Spiel starten (${players.length}/10)</button>
+      ${!canStart ? '<div class="small-muted" style="margin-top:8px;">Mindestens 2 Spieler nötig.</div>' : ''}
+      <button class="btn ghost small" style="margin-top:14px;" onclick="resetToEntry()">Raum verlassen</button>
+    </div>`;
+}
+
+function copyRoomLink(){
+  try{ navigator.clipboard.writeText(local.roomCode); }catch(e){}
+}
+
+function renderGame(){
+  const p = myPlayer();
+  const histHtml = (shared.history||[]).map(h=>`<div class="hist-chip" style="background:${colorHex(h.color)}">${h.num}</div>`).join('');
+  const showOverlay = shared.spinning && local.revealedSeq === shared.spinSeq;
+
+  return `
+    <div class="masthead">
+      <div><h1>Kessel &amp; Kredit</h1><div class="sub">Online-Roulette</div></div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <div class="room-badge" onclick="copyRoomLink()">Raum: ${escapeHtml(local.roomCode)}</div>
+        <div class="round-badge">Runde ${shared.round}</div>
+      </div>
+    </div>
+    ${(shared.history||[]).length ? `<div class="history-strip">${histHtml}</div>` : ''}
+    <div class="game-grid">
+      <div>
+        ${renderWheelZone()}
+        ${renderTable(p)}
+      </div>
+      <div class="sidebar">
+        ${renderPlayersPanel()}
+        ${shared.bettingOpen ? renderTurnPanel(p) : renderSpinPanel()}
+      </div>
+    </div>
+    <div class="footer-actions">
+      <button class="btn ghost small" onclick="resetToEntry()">Raum verlassen</button>
+      <span class="small-muted">Nur virtuelles Geld – kein echter Einsatz.</span>
+    </div>
+    ${showOverlay ? renderResultOverlay() : ''}
+  `;
+}
+
+function renderWheelZone(){
+  let resultLine = 'Bereit für den nächsten Dreh.';
+  if(shared.spinning && local.revealedSeq!==shared.spinSeq) resultLine = 'Der Ball rollt…';
+  else if(shared.lastResult!==null && shared.lastResult!==undefined){
+    const c = numberColor(shared.lastResult);
+    resultLine = `Zuletzt: <b>${shared.lastResult}</b> (${labelColor(c)})`;
+  }
+  return `
+    <div class="wheel-zone">
+      <div class="wheel-outer">
+        <div class="wheel-pointer"></div>
+        <div class="wheel-disc" id="wheelDisc" style="background:${wheelGradient()}"></div>
+        <div class="wheel-hub">${(shared.lastResult===null||shared.lastResult===undefined)?'?':shared.lastResult}</div>
+      </div>
+      <div class="result-line">${resultLine}</div>
+    </div>`;
+}
+
+function wheelGradient(){
+  const seg = 360/37; let stops = [];
+  WHEEL_ORDER.forEach((n,i)=>{
+    const c = colorHex(numberColor(n));
+    stops.push(`${c} ${(i*seg).toFixed(3)}deg ${((i+1)*seg).toFixed(3)}deg`);
+  });
+  return `conic-gradient(${stops.join(',')})`;
+}
+
+function renderTable(p){
+  const myTurn = isMyTurn();
+  const locked = p && shared.locked ? shared.locked[local.myPlayerId] : true;
+  const disabled = !myTurn || !shared.bettingOpen || locked || shared.spinning;
+  const dis = disabled ? 'disabled' : '';
+  const myId = local.myPlayerId;
+
+  let rowsHtml = '';
+  for(let r=0;r<3;r++){
+    let cells='';
+    for(let c=0;c<12;c++){
+      const n = c*3 + (3-r);
+      const color = numberColor(n);
+      const stake = stakeOn(myId, 'num:'+n);
+      cells += `<button class="num-btn ${color}" ${dis} onclick="placeBet('num:${n}')">${n}${stake?`<span class="stake-badge">${stake}</span>`:''}</button>`;
+    }
+    rowsHtml += `<div class="num-row">${cells}</div>`;
+  }
+
+  const zeroStake = stakeOn(myId,'num:0');
+  const col1Stake=stakeOn(myId,'col1'), col2Stake=stakeOn(myId,'col2'), col3Stake=stakeOn(myId,'col3');
+
+  const dozenDefs = [['dozen1','1 – 12'],['dozen2','13 – 24'],['dozen3','25 – 36']];
+  const dozensHtml = dozenDefs.map(([key,label])=>{
+    const st = stakeOn(myId,key);
+    return `<button class="bet-btn" ${dis} onclick="placeBet('${key}')" style="flex:4">${label}${st?`<div class="small-muted">Einsatz: ${st}</div>`:''}</button>`;
+  }).join('');
+
+  const outsideDefs = [['low','1–18'],['even','Gerade'],['red','Rot'],['black','Schwarz'],['odd','Ungerade'],['high','19–36']];
+  const outsideHtml = outsideDefs.map(([key,label])=>{
+    const st = stakeOn(myId,key);
+    const bg = key==='red' ? 'background:var(--red); color:var(--cream); border-color:transparent;' :
+               key==='black' ? 'background:var(--black); color:var(--cream); border-color:transparent;' : '';
+    return `<button class="bet-btn" style="flex:2;${bg}" ${dis} onclick="placeBet('${key}')">${label}${st?`<div class="small-muted" style="color:inherit;opacity:.85">Einsatz: ${st}</div>`:''}</button>`;
+  }).join('');
+
+  return `
+    <div class="table-zone">
+      <div class="numbers-area">
+        <button class="zero-btn" ${dis} onclick="placeBet('num:0')">0${zeroStake?`<span class="stake-badge">${zeroStake}</span>`:''}</button>
+        <div class="numbers-grid">${rowsHtml}</div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <button class="col-btn" ${dis} onclick="placeBet('col1')">2:1${col1Stake?` (${col1Stake})`:''}</button>
+          <button class="col-btn" ${dis} onclick="placeBet('col2')">2:1${col2Stake?` (${col2Stake})`:''}</button>
+          <button class="col-btn" ${dis} onclick="placeBet('col3')">2:1${col3Stake?` (${col3Stake})`:''}</button>
+        </div>
+      </div>
+      <div style="display:flex; gap:4px; margin:4px 60px 4px 48px;">${dozensHtml}</div>
+      <div style="display:flex; gap:4px; margin-left:48px; margin-right:60px;">${outsideHtml}</div>
+      <div class="chip-row">
+        <span class="small-muted" style="margin-right:4px;">Chip:</span>
+        ${CHIP_VALUES.map(v=>`<div class="chip ${local.chip===v?'active':''}" style="background:${chipColor(v)}" onclick="local.chip=${v};render()">${v}</div>`).join('')}
+        <div class="chip ${local.chip==='all'?'active':''}" style="background:var(--gold-soft); font-size:9px;" onclick="local.chip='all';render()">ALLES</div>
+      </div>
+      <div class="table-controls">
+        <button class="btn small ghost" ${dis} onclick="undoLastBet()">Letzten Einsatz zurück</button>
+        <button class="btn small ghost" ${dis} onclick="clearBets()">Einsätze löschen</button>
+      </div>
+      ${!myTurn ? `<div class="waiting-note">Du bist beim Wetten nicht am Zug — schau zu, während ${escapeHtml((shared.players[shared.playerOrder[shared.currentIdx]]||{}).name||'')} setzt.</div>` : ''}
+    </div>`;
+}
+
+function chipColor(v){
+  const map = {10:'#8c8c8c',25:'#3f7fc4',50:'#c94a3a',100:'#2f8f5b',250:'#8a4fc9',500:'#c9a227'};
+  return map[v] || '#c9a227';
+}
+
+function renderPlayersPanel(){
+  const cards = (shared.playerOrder||[]).map(pid=>{
+    const p = shared.players[pid];
+    const active = shared.bettingOpen && shared.playerOrder[shared.currentIdx]===pid;
+    const isMe = pid===local.myPlayerId;
+    return `
+      <div class="player-card ${active?'active':''} ${isMe?'me':''}">
+        <div class="pname">${escapeHtml(p.name)}${isMe?' (du)':''} ${active?'<span class="turn-tag">AM ZUG</span>':''}</div>
+        <div class="pbalance">Kapital: <b>${fmt(p.balance)}</b></div>
+        ${p.debt>0 ? `<div class="pdebt">Schulden: ${fmt(p.debt)} (+2%/Runde)</div>` : ''}
+        ${p.balance<=0 && p.debt<=0 ? `<div class="pdebt" style="color:var(--gold-soft)">Bankrott – Kredit nötig</div>` : ''}
+      </div>`;
+  }).join('');
+  return `<div class="players-panel"><h3>Spieler</h3>${cards}</div>`;
+}
+
+function renderTurnPanel(p){
+  const myTurn = isMyTurn();
+  if(!myTurn){
+    const activeName = (shared.players[shared.playerOrder[shared.currentIdx]]||{}).name || '';
+    return `<div class="turn-panel"><h3>Warte…</h3><p class="waiting-note">${escapeHtml(activeName)} platziert gerade Einsätze.</p></div>`;
+  }
+  const staked = totalStake(local.myPlayerId);
+  return `
+    <div class="turn-panel">
+      <h3>${escapeHtml(p.name)}, du bist am Zug</h3>
+      <div class="stake-total">Einsätze diese Runde: <b>${staked}</b> · Kapital übrig: <b>${fmt(p.balance)}</b></div>
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <button class="btn small primary" onclick="lockInPlayer()">Einsätze sperren &amp; weiter</button>
+      </div>
+      <button class="btn small ghost" onclick="passTurn()">Diese Runde aussetzen</button>
+      <div class="loan-box">
+        <label>Kredit aufnehmen (Schulden +2%/Runde)</label>
+        <div class="quick-loans">
+          <button class="btn small ghost" onclick="takeLoan(500)">+500</button>
+          <button class="btn small ghost" onclick="takeLoan(1000)">+1000</button>
+        </div>
+        <div class="loan-row">
+          <input type="number" min="1" id="loanAmt" placeholder="Betrag">
+          <button class="btn small" onclick="takeLoan(document.getElementById('loanAmt').value)">Aufnehmen</button>
+        </div>
+        ${p.debt>0 ? `
+        <label>Schulden zurückzahlen (aktuell: ${fmt(p.debt)})</label>
+        <div class="loan-row">
+          <input type="number" min="1" id="repayAmt" placeholder="Betrag">
+          <button class="btn small" onclick="repayDebt(document.getElementById('repayAmt').value)">Zahlen</button>
+        </div>` : ''}
+      </div>
+      <div class="msg-box">${local.msg}</div>
+    </div>`;
+}
+
+function renderSpinPanel(){
+  return `
+    <div class="turn-panel">
+      <h3>Alle Einsätze sind gesperrt</h3>
+      <p class="small-muted">Jede Person im Raum kann jetzt drehen.</p>
+      <button class="btn primary wide" style="margin-top:8px;" ${shared.spinning?'disabled':''} onclick="spinWheel()">
+        ${shared.spinning ? 'Kessel dreht sich…' : 'Kessel drehen'}
+      </button>
+    </div>`;
+}
+
+function renderResultOverlay(){
+  const changes = shared.lastRoundChanges || [];
+  const c = numberColor(shared.lastResult);
+  const rows = changes.map(ch=>`
+    <div class="payout-row"><span>${escapeHtml(ch.name)}</span><span class="amt ${ch.net>=0?'pos':'neg'}">${ch.net>=0?'+':''}${fmt(ch.net)}</span></div>`).join('');
+  return `
+    <div class="overlay">
+      <div class="result-modal">
+        <h2>Ergebnis dieser Runde</h2>
+        <div class="num-display" style="background:${colorHex(c)}">${shared.lastResult}</div>
+        <div>${rows}</div>
+        <div class="interest-note">Offene Schulden wachsen mit Beginn der nächsten Runde um 2%.</div>
+        <button class="btn primary wide" style="margin-top:16px;" onclick="nextRound()">Nächste Runde</button>
+      </div>
+    </div>`;
+}
+
+render();
+</script>
+</body>
+</html>
