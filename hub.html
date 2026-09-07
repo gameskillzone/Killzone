@@ -252,5 +252,38 @@
   </main>
 
   <footer>GAMEHUB — MADE WITH ♥ IN LUZERN</footer>
+
+  <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, runTransaction, set, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+  const firebaseConfig = {
+    databaseURL: "https://killzone-ae24e-default-rtdb.firebaseio.com"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const GAME = "hub"; // pro Datei anpassen
+
+  // 1) Gesamt-Aufrufe hochzählen (jeder Ladevorgang)
+  const visitsRef = ref(db, `stats/${GAME}/visits`);
+  runTransaction(visitsRef, (current) => (current || 0) + 1);
+
+  // 2) Eindeutige Besucher zählen (per Browser-ID)
+  let visitorId = localStorage.getItem("visitorId");
+  if (!visitorId) {
+    visitorId = crypto.randomUUID();
+    localStorage.setItem("visitorId", visitorId);
+  }
+
+  const uniqueRef = ref(db, `stats/${GAME}/uniqueVisitors/${visitorId}`);
+  get(uniqueRef).then((snap) => {
+    if (!snap.exists()) {
+      set(uniqueRef, true);
+      runTransaction(ref(db, `stats/${GAME}/uniqueCount`), (current) => (current || 0) + 1);
+    }
+  });
+</script>
 </body>
 </html>
